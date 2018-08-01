@@ -7,33 +7,5 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library" exported="">
-      <library>
-        <CLASSES>
-          <root url="jar://$APPLICATION_CONFIG_DIR$/jdbc-drivers/SQL Server/6.4.0/sqljdbc42-6.4.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library>
-        <CLASSES>
-          <root url="jar://$APPLICATION_CONFIG_DIR$/jdbc-drivers/SQL Server/6.4.0/sqlserver6-win-auth.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library>
-        <CLASSES />
-        <JAVADOC />
-        <NATIVE>
-          <root url="file://$USER_HOME$/Documents/Microsoft JDBC Driver 6.4 for SQL Server/sqljdbc_6.4/enu/auth/x64" />
-        </NATIVE>
-        <SOURCES />
-      </library>
-    </orderEntry>
   </component>
 </module>
