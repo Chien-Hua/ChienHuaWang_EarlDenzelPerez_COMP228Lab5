@@ -19,12 +19,14 @@ import javafx.stage.Stage;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+
 public class MyGameFrame extends Application {
+    // set values for frame
     public static final Insets STANDARD_INSETS = new Insets(3);
     public static final Insets HEADER_DISTANCE = new Insets(10,0,0,0);
     public static final int MIN_WIDTH = 640;
     public static final int MIN_HEIGHT = 480;
-    public GridPane myGamePane = new GridPane();
+    public GridPane myGamePane = new GridPane(); // main pane
     public GridPane gameInformation = new GridPane();
     public GridPane playerInformation = new GridPane();
     public GridPane scoreInformation = new GridPane();
@@ -51,11 +53,11 @@ public class MyGameFrame extends Application {
         catch(SQLException e){
             Alert alert = new Alert(Alert.AlertType.ERROR, "There seems to be a database error that needs to be addressed!");
             alert.show();
-            //tableModel.disconnectFromDatabase();
+            dbHandler.disconnectFromDatabase();
             System.exit(1);
         }
 
-        //overall window settings
+        //main window settings
         myGamePane.setMinSize(MIN_WIDTH, MIN_HEIGHT);
         myGamePane.setStyle("-fx-background-color: white");
         myGamePane.setAlignment(Pos.TOP_LEFT);
@@ -69,7 +71,7 @@ public class MyGameFrame extends Application {
         topMenu.setVgap(5);
         topMenu.setHgap(5);
         topMenu.setStyle("-fx-background-color: lightgray");
-        topMenu.setPrefWidth(640);
+        topMenu.setPrefWidth(MIN_WIDTH);
         topMenu.setPadding(STANDARD_INSETS);
         topMenu.add(scoreBtn, 0, 0);
         topMenu.add(gameBtn, 1, 0);
