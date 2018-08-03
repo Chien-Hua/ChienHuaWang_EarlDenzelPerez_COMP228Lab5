@@ -26,6 +26,42 @@ public class MyGameDatabaseHandler {
         return statement.executeQuery();
     }
 
+    public int retrieveNewGameID() throws SQLException, IllegalStateException{
+        int maxID = 0;
+        statement = con.prepareStatement("SELECT MAX(game_id) from Game");
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()) {
+            maxID = rs.getInt(1) + 1;
+        }
+        rs.close();
+        return maxID;
+    }
+
+    public String retrieveGameName(String id) throws SQLException, IllegalStateException{
+        String gameName = "";
+        statement = con.prepareStatement("SELECT game_title from Game WHERE game_id = " + id);
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()){
+            gameName = rs.getString("game_title");
+        }
+        rs.close();
+        return gameName;
+    }
+
+    public void addNewGame(int newID, String gameName) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement("INSERT into Game (game_id, game_title) VALUES (?,?)");
+        statement.setInt(1,newID);
+        statement.setString(2, gameName);
+        statement.executeUpdate();
+    }
+
+    public void updateGame(String gameID, String newGameName) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement("UPDATE Game SET game_title = ? WHERE game_id = ? ");
+        statement.setString(1, newGameName);
+        statement.setInt(2, Integer.parseInt(gameID));
+        statement.executeUpdate();
+    }
+
     public void disconnectFromDatabase(){
         if (connected){
             try{
