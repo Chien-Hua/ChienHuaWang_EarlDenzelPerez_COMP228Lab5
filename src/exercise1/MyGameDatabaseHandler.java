@@ -26,6 +26,11 @@ public class MyGameDatabaseHandler {
         return statement.executeQuery();
     }
 
+    public ResultSet retrievePlayers() throws SQLException, IllegalStateException{
+        statement = con.prepareStatement("SELECT * from Player");
+        return statement.executeQuery();
+    }
+
     public int retrieveNewGameID() throws SQLException, IllegalStateException{
         int maxID = 0;
         statement = con.prepareStatement("SELECT MAX(game_id) from Game");

@@ -1,6 +1,7 @@
 package exercise1;
 
 import javafx.application.Application;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -15,6 +16,8 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,6 +27,8 @@ public class MyGameFrame extends Application {
     // set values for frames
     public static final Insets STANDARD_INSETS = new Insets(3);
     public static final Insets HEADER_DISTANCE = new Insets(10,0,0,0);
+    public static final int NORMAL_GAP = 5;
+    public static final int TEXTFIELD_WIDTH = 200;
     public static final int MIN_WIDTH = 640;
     public static final int MIN_HEIGHT = 480;
     public GridPane myGamePane = new GridPane(); // main pane
@@ -34,6 +39,7 @@ public class MyGameFrame extends Application {
     public ScrollPane body;
     public MyGameDatabaseHandler dbHandler;
     private boolean gameDataPopulated = false;
+    private boolean playerDataPopulated = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -81,6 +87,7 @@ public class MyGameFrame extends Application {
         Label addGamesHeader = new Label("Add Games");
         addGamesHeader.setFont(Font.font("Arial", 24));
         TextField gameName = new TextField();
+        gameName.setPrefWidth(TEXTFIELD_WIDTH);
         Button addNewGame = new Button("Add!");
         gameInformation.add(gameHeader, 0, 0, 3, 1);
         gameInformation.add(addGamesHeader, 0, 2, 3, 1);
@@ -91,19 +98,31 @@ public class MyGameFrame extends Application {
         gameInformation.setStyle("-fx-background-color: lightgray");
         gameInformation.setPadding(STANDARD_INSETS);
         gameInformation.setPrefHeight(MIN_HEIGHT);
+        gameInformation.setHgap(NORMAL_GAP);
+        gameInformation.setVgap(NORMAL_GAP);
 
         //player information items
-        Label playerHeader = new Label("Player Information");
+        Label playerHeader = new Label("Player List");
         playerHeader.setFont(Font.font("Arial", 24));
-        TextField playerName = new TextField();
+        Label addPlayersHeader = new Label("Add New Player");
+        addPlayersHeader.setFont(Font.font("Arial", 24));
+        TextField firstName = new TextField();
+        firstName.setPrefWidth(TEXTFIELD_WIDTH);
+        TextField lastName = new TextField();
+        lastName.setPrefWidth(TEXTFIELD_WIDTH);
+        TextField address = new TextField();
+        address.setPrefWidth(2*TEXTFIELD_WIDTH);
+
         Button addNewPlayer = new Button("Add!");
         playerInformation.add(playerHeader, 0, 0, 2, 1);
-        playerInformation.add(new Label("Add new player: "), 0, 1);
-        playerInformation.add(playerName, 1, 1);
-        playerInformation.add(addNewPlayer, 2, 1);
+        playerInformation.add(addPlayersHeader,0,2,2,1);
+        playerInformation.add(addNewPlayer, 0, 3);
+        retrievePlayers();
         playerInformation.setStyle("-fx-background-color: lightgray");
         playerInformation.setPadding(STANDARD_INSETS);
         playerInformation.setPrefHeight(MIN_HEIGHT);
+        playerInformation.setHgap(NORMAL_GAP);
+        playerInformation.setVgap(NORMAL_GAP);
 
         //score information items
         Label addScoreHeader = new Label("Add new score");
@@ -127,6 +146,8 @@ public class MyGameFrame extends Application {
         scoreInformation.setStyle("-fx-background-color: lightgray");
         scoreInformation.setPadding(STANDARD_INSETS);
         scoreInformation.setPrefHeight(MIN_HEIGHT);
+        scoreInformation.setHgap(NORMAL_GAP);
+        scoreInformation.setVgap(NORMAL_GAP);
 
         //add top menu to the main frame, myGamePane
         myGamePane.add(topMenu, 0, 0);
@@ -200,21 +221,25 @@ public class MyGameFrame extends Application {
         try {
             //inner grid pane stats
             GridPane gameList = new GridPane();
-            ColumnConstraints column1 = new ColumnConstraints(50);
-            ColumnConstraints column2 = new ColumnConstraints(100, 100, Double.MAX_VALUE);
-            column2.setHgrow(Priority.ALWAYS);
-            ColumnConstraints column3 = new ColumnConstraints(50);
-            gameList.getColumnConstraints().addAll(column1, column2, column3);
+            ColumnConstraints column1 = new ColumnConstraints();
+            column1.setHalignment(HPos.CENTER);
+            gameList.getColumnConstraints().add(column1);
+            gameList.setHgap(NORMAL_GAP);
+            gameList.setVgap(NORMAL_GAP);
 
             //populate grid pane with data if possible
-            int i = 0;
-            gameList.add(new Label("Game ID"), 0, i);
-            gameList.add(new Label("Game Title"), 1, i);
+            Label gameIDLabel = new Label("Game ID");
+            gameIDLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            gameList.add(gameIDLabel, 0, 0);
+            Label gameTitleLabel = new Label("Game Title");
+            gameTitleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            gameList.add(gameTitleLabel, 1, 0);
             ResultSet resultSet = dbHandler.retrieveGames();
             if (!resultSet.next()){
                 gameList.add(new Label("Game list empty!"), 1, 1, 2, 1);
             }
             else{
+                int i = 0;
                 do{
                     i++;
                     String gameID = resultSet.getString("game_id");
@@ -222,7 +247,7 @@ public class MyGameFrame extends Application {
                     gameList.add(new Label(resultSet.getString("game_title")), 1, i);
                     Button editButton = new Button("Edit");
                     editButton.setOnAction(e->{
-                        showEditScreen(gameID);
+                        showEditGameScreen(gameID);
                     });
                     gameList.add(editButton, 2, i);
                 } while (resultSet.next());
@@ -231,6 +256,55 @@ public class MyGameFrame extends Application {
             gameList.setPadding(STANDARD_INSETS);
             gameInformation.add(gameList, 0,1,3,1);
             gameDataPopulated = true;
+            resultSet.close();
+        }
+        catch(SQLException e){
+            handleSQLException();
+        }
+    }
+
+    //retrieves and formats list of games
+    public void retrievePlayers(){
+        if (playerDataPopulated){
+            playerInformation.getChildren().remove(3);
+        }
+        try {
+            //inner grid pane stats
+            GridPane playerList = new GridPane();
+            ColumnConstraints column1 = new ColumnConstraints();
+            column1.setHalignment(HPos.CENTER);
+            playerList.getColumnConstraints().add(column1);
+
+            //populate grid pane with data if possible
+            Label playerIDLabel = new Label("Player ID");
+            playerIDLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            playerList.add(playerIDLabel, 0, 0);
+            Label playerTitleLabel = new Label("Player Title");
+            playerTitleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            playerList.add(playerTitleLabel, 1, 0);
+            ResultSet resultSet = dbHandler.retrievePlayers();
+            if (!resultSet.next()){
+                playerList.add(new Label("Player list empty!"), 1, 1, 2, 1);
+            }
+            else{
+                int i = 0;
+                do{
+                    i++;
+                    String playerID = resultSet.getString("player_id");
+                    playerList.add(new Label(playerID), 0, i);
+                    String playerName = resultSet.getString("first_name") + " " + resultSet.getString("last_name");
+                    playerList.add(new Label(playerName), 1, i);
+                    Button profileButton = new Button("Profile");
+                    profileButton.setOnAction(e->{
+                        //showEditGameScreen(gameID);
+                    });
+                    playerList.add(profileButton, 2, i);
+                } while (resultSet.next());
+            }
+
+            playerList.setPadding(STANDARD_INSETS);
+            playerInformation.add(playerList, 0,1,3,1);
+            playerDataPopulated = true;
             resultSet.close();
         }
         catch(SQLException e){
@@ -252,7 +326,7 @@ public class MyGameFrame extends Application {
 
     }
 
-    public void showEditScreen(String gameID){
+    public void showEditGameScreen(String gameID){
         editGameInformation = new GridPane();
         Label editGameHeader = new Label("Editing game with id " + gameID);
         editGameHeader.setFont(Font.font("Arial", 24));
