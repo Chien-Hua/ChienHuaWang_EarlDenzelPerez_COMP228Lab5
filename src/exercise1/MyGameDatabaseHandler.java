@@ -53,6 +53,11 @@ public class MyGameDatabaseHandler {
         return gameName;
     }
 
+    public ResultSet retrievePlayerInfo(String id) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement("SELECT * from  Player WHERE player_id = " + id);
+        return statement.executeQuery();
+    }
+
     public void addNewGame(int newID, String gameName) throws SQLException, IllegalStateException{
         statement = con.prepareStatement("INSERT into Game (game_id, game_title) VALUES (?,?)");
         statement.setInt(1,newID);
