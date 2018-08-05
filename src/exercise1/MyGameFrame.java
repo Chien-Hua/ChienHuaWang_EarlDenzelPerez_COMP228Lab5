@@ -20,7 +20,6 @@ import javafx.stage.Stage;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-
 public class MyGameFrame extends Application {
     // set values for frames
     public static final Insets STANDARD_INSETS = new Insets(3);
@@ -29,11 +28,13 @@ public class MyGameFrame extends Application {
     public static final int TEXTFIELD_WIDTH = 200;
     public static final int MIN_WIDTH = 640;
     public static final int MIN_HEIGHT = 480;
+    public static final String CANADIAN_ZIPCODE_REGEX = "[A-Z][0-9][A-Z][0-9][A-Z][0-9]";
     public GridPane myGamePane = new GridPane(); // main pane
     public GridPane gameInformation = new GridPane();
     public GridPane editGameInformation;
     public GridPane addGameInformation = new GridPane();
     public GridPane playerInformation = new GridPane();
+    public GridPane showPlayerInformation;
     public GridPane editPlayerInformation;
     public GridPane addPlayerInformation = new GridPane();
     public GridPane scoreInformation = new GridPane();
@@ -203,18 +204,51 @@ public class MyGameFrame extends Application {
                 try {
                     dbHandler.addNewGame(dbHandler.retrieveNewGameID(), gameToAdd);
                     showAlertMessage(AlertType.CONFIRMATION, "Game added!");
+                    gameName.setText("");
+                    changeFrame(gameInformation);
+                    retrieveGamesMenu(addGameInformation);
+                    gameBtn.requestFocus();
                 }
                 catch (SQLException ex) {
                     handleSQLException();
                 }
             }
-            gameName.setText("");
-            changeFrame(gameInformation);
-            retrieveGamesMenu(addGameInformation);
-            gameBtn.requestFocus();
         });
         addNewPlayer.setOnAction(e->{
-            //TODO
+            String fName = firstName.getText().trim();
+            String lName = lastName.getText().trim();
+            String addr = address.getText().trim();
+            String prvCode = provinceCode.getText().replaceAll("\\s+","").toUpperCase().trim();
+            String zipCode = postalCode.getText().toUpperCase().trim();
+            String phoneNum = phoneNumber.getText().trim();
+
+            if (fName.isEmpty() && lName.isEmpty()){
+                showAlertMessage(Alert.AlertType.ERROR, "Please provide a name!");
+            }
+            else if (prvCode.length() != 2){
+                showAlertMessage(Alert.AlertType.ERROR, "Please input the two-character code associated with the province. For example, ON for Ontario");
+            }
+            else if (!zipCode.matches(CANADIAN_ZIPCODE_REGEX)){
+                showAlertMessage(Alert.AlertType.ERROR, "Zip code must be a valid Canadian format zipcode");
+            }
+            else {
+                try {
+                    dbHandler.addNewPlayer(dbHandler.retrieveNewPlayerID(), fName, lName, addr, prvCode, zipCode, phoneNum);
+                    showAlertMessage(AlertType.CONFIRMATION, "Player added!");
+                    firstName.setText("");
+                    lastName.setText("");
+                    address.setText("");
+                    provinceCode.setText("");
+                    postalCode.setText("");
+                    phoneNumber.setText("");
+                    changeFrame(playerInformation);
+                    retrievePlayersMenu(addPlayerInformation);
+                    playerBtn.requestFocus();
+                }
+                catch (SQLException ex) {
+                    handleSQLException();
+                }
+            }
         });
 
         //setting stage
@@ -327,16 +361,11 @@ public class MyGameFrame extends Application {
                     playerList.add(new Label(playerID), 0, i);
                     String playerName = resultSet.getString("first_name") + " " + resultSet.getString("last_name");
                     playerList.add(new Label(playerName), 1, i);
-                    Button showButton = new Button("Profile");
-                    Button editButton = new Button("Edit");                    
+                    Button showButton = new Button("Profile");               
                     showButton.setOnAction(e->{
-                        //showPlayerScreen(playerID);
-                    });
-                    editButton.setOnAction(e->{
-                        showEditPlayerScreen(playerID);
+                        showPlayerScreen(playerID);
                     });
                     playerList.add(showButton, 2, i);
-                    playerList.add(editButton, 3, i);
                 } while (resultSet.next());
             }
 
@@ -408,8 +437,66 @@ public class MyGameFrame extends Application {
         changeFrame(gameInformation);
         retrieveGamesMenu(editGameInformation);
     }
+    
+    public void showPlayerScreen(String playerID){
+        showPlayerInformation = new GridPane();
+        Label showPlayerHeader = new Label("Player information");
+        showPlayerHeader.setFont(Font.font("Arial", 24));
+        try{
+            String firstName = "";
+            String lastName = "";
+            String address = "";
+            String postalCode = "";
+            String provinceCode = "";
+            String phoneNumber = "";
+            Button editPlayer = new Button("Edit!");
 
-    public void showEditPlayerScreen(String playerID){
+            ResultSet rs = dbHandler.retrievePlayerInfo(playerID);
+            if (rs.next()) {
+                firstName = rs.getString("first_name");
+                lastName = rs.getString("last_name");
+                address = rs.getString("address");
+                postalCode = rs.getString("postal_code");
+                provinceCode = rs.getString("province");
+                phoneNumber = rs.getString("phone_number");
+            }
+            rs.close();
+
+            showPlayerInformation.add(showPlayerHeader,0,0,2,1);
+            showPlayerInformation.add(new Label("First name: "), 0, 1);
+            showPlayerInformation.add(new Label(firstName), 1, 1);
+            showPlayerInformation.add(new Label("Last name: "), 0, 2);
+            showPlayerInformation.add(new Label(lastName), 1,2);
+            showPlayerInformation.add(new Label("Address: "), 0, 3);
+            showPlayerInformation.add(new Label(address), 1,3);
+            showPlayerInformation.add(new Label("Province: "), 0,4);
+            showPlayerInformation.add(new Label(provinceCode), 1, 4);
+            showPlayerInformation.add(new Label("Postal Code: "), 0, 5);
+            showPlayerInformation.add(new Label(postalCode), 1, 5);
+            showPlayerInformation.add(new Label("Phone Number: "), 0, 6);
+            showPlayerInformation.add(new Label(phoneNumber),1,6);
+            showPlayerInformation.add(editPlayer, 1, 7);
+            showPlayerInformation.setStyle("-fx-background-color: lightgray");
+            showPlayerInformation.setPadding(STANDARD_INSETS);
+            showPlayerInformation.setPrefHeight(MIN_HEIGHT);
+            showPlayerInformation.setHgap(NORMAL_GAP);
+            showPlayerInformation.setVgap(NORMAL_GAP);
+            editPlayer.requestFocus();
+            editPlayer.setOnAction(e ->{
+                changeFrame(playerInformation);
+                createEditPlayerScreen(playerID);
+                retrievePlayersMenu(editPlayerInformation);
+
+            });
+        }
+        catch(SQLException e){
+            handleSQLException();
+        }
+        changeFrame(playerInformation);
+        retrievePlayersMenu(showPlayerInformation);
+    }
+
+    public void createEditPlayerScreen(String playerID){
         editPlayerInformation = new GridPane();
         try{
             Label editPlayerHeader = new Label("Editing player with id " + playerID);
@@ -460,29 +547,38 @@ public class MyGameFrame extends Application {
             editPlayerInformation.setVgap(NORMAL_GAP);
             editPlayer.requestFocus();
             editPlayer.setOnAction(e ->{
-                //String playerToEdit = playerName.getText().trim();
-                //if (playerToEdit.isEmpty()){
-                //    showAlertMessage(Alert.AlertType.ERROR, "Please provide a player name!");
-                //}
-                //else {
-                //    try {
-                //        dbHandler.updatePlayer(playerID, playerToEdit);
-                //        showAlertMessage(AlertType.CONFIRMATION, "Player edited!");
-                //    }
-                //    catch (SQLException ex) {
-                //        handleSQLException();
-                //    }
-                //}
-                changeFrame(playerInformation);
-                retrievePlayersMenu(addPlayerInformation);
+                String fName = firstName.getText().trim();
+                String lName = lastName.getText().trim();
+                String addr = address.getText().trim();
+                String prvCode = provinceCode.getText().replaceAll("\\s+","").toUpperCase().trim();
+                String zipCode = postalCode.getText().toUpperCase().trim();
+                String phoneNum = phoneNumber.getText().trim();
+
+                if (fName.isEmpty() && lName.isEmpty()){
+                    showAlertMessage(Alert.AlertType.ERROR, "Please provide a name!");
+                }
+                else if (prvCode.length() != 2){
+                    showAlertMessage(Alert.AlertType.ERROR, "Please input the two-character code associated with the province. For example, ON for Ontario");
+                }
+                else if (!zipCode.matches(CANADIAN_ZIPCODE_REGEX)){
+                    showAlertMessage(Alert.AlertType.ERROR, "Zip code must be a valid Canadian format zipcode");
+                }
+                else {
+                    try {
+                        dbHandler.updatePlayer(playerID, fName, lName, addr, prvCode, zipCode, phoneNum);
+                        showAlertMessage(AlertType.CONFIRMATION, "Player edited!");
+                        changeFrame(playerInformation);
+                        retrievePlayersMenu(addPlayerInformation);
+                    }
+                    catch (SQLException ex) {
+                        handleSQLException();
+                    }
+                }
 
             });
         }
         catch(SQLException e){
             handleSQLException();
         }
-        changeFrame(playerInformation);
-        retrievePlayersMenu(editPlayerInformation);
     }
-
 }

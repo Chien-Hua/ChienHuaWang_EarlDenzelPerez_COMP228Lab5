@@ -42,6 +42,17 @@ public class MyGameDatabaseHandler {
         return maxID;
     }
 
+    public int retrieveNewPlayerID() throws SQLException, IllegalStateException{
+        int maxID = 0;
+        statement = con.prepareStatement("SELECT MAX(player_id) from Player");
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()) {
+            maxID = rs.getInt(1) + 1;
+        }
+        rs.close();
+        return maxID;
+    }
+
     public String retrieveGameName(String id) throws SQLException, IllegalStateException{
         String gameName = "";
         statement = con.prepareStatement("SELECT game_title from Game WHERE game_id = " + id);
@@ -65,12 +76,46 @@ public class MyGameDatabaseHandler {
         statement.executeUpdate();
     }
 
+    public void addNewPlayer(int newID, String firstName, String lastName, String address,
+                             String province, String zipCode, String phoneNumber) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement(
+                "INSERT into Player (player_id, first_name, last_name, address, province, postal_code, phone_number) " +
+                        "VALUES (?,?,?,?,?,?,?)");
+        statement.setInt(1, newID);
+        statement.setString(2, firstName);
+        statement.setString(3, lastName);
+        statement.setString(4, address);
+        statement.setString(5, province);
+        statement.setString(6, zipCode);
+        statement.setString(7, phoneNumber);
+        statement.executeUpdate();
+
+    }
+
     public void updateGame(String gameID, String newGameName) throws SQLException, IllegalStateException{
         statement = con.prepareStatement("UPDATE Game SET game_title = ? WHERE game_id = ? ");
         statement.setString(1, newGameName);
         statement.setInt(2, Integer.parseInt(gameID));
         statement.executeUpdate();
     }
+
+    public void updatePlayer(String playerID, String firstName, String lastName, String address,
+                             String province, String zipCode, String phoneNumber) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement(
+                "UPDATE Player SET first_name = ?, last_name = ?, address = ?, province = ?, postal_code = ?, phone_number = ? " +
+                        "WHERE player_id = ?");
+        statement.setString(1, firstName);
+        statement.setString(2, lastName);
+        statement.setString(3, address);
+        statement.setString(4, province);
+        statement.setString(5, zipCode);
+        statement.setString(6, phoneNumber);
+        statement.setInt(7, Integer.parseInt(playerID));
+        statement.executeUpdate();
+
+    }
+
+
 
     public void disconnectFromDatabase(){
         if (connected){
