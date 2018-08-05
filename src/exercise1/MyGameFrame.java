@@ -38,6 +38,7 @@ public class MyGameFrame extends Application {
     public GridPane editPlayerInformation;
     public GridPane addPlayerInformation = new GridPane();
     public GridPane scoreInformation = new GridPane();
+    public GridPane addScoreInformation = new GridPane();
     public ScrollPane body;
     public MyGameDatabaseHandler dbHandler;
     private boolean gameDataPopulated = false;
@@ -154,8 +155,24 @@ public class MyGameFrame extends Application {
         //score information items
         Label addScoreHeader = new Label("Add new score");
         addScoreHeader.setFont(Font.font("Arial", 24));
-        ComboBox playerForScore = new ComboBox();
+        ComboBox<String> playerForScore = new ComboBox();
         ComboBox gameForScore = new ComboBox();
+        try{
+            ResultSet playerSet = dbHandler.retrievePlayers();
+            while (playerSet.next()){
+                String fullName = playerSet.getString("first_name") + " " + playerSet.getString("last_name");
+                playerForScore.getItems().add(fullName);
+            }
+            playerSet.close();
+            ResultSet gameSet = dbHandler.retrieveGames();
+            while (gameSet.next()){
+                gameForScore.getItems().add(gameSet.getString("game_title"));
+            }
+            gameSet.close(); 
+        }
+        catch (SQLException ex) {
+            handleSQLException();
+        }
         TextField textForScore = new TextField();
         Button addNewScore = new Button("Add score");
         Label latestScoreHeader = new Label("Latest scores");
