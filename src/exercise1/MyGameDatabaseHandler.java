@@ -36,6 +36,15 @@ public class MyGameDatabaseHandler {
         return statement.executeQuery();
     }
 
+    public ResultSet retrieveScores(int playerID) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement(
+                "SELECT (first_name  + ' ' + last_name) as full_name, game_title, playing_date, score from PlayerAndGame " +
+                        "JOIN Player on PlayerAndGame.player_id = Player.player_id " +
+                        "JOIN Game on PlayerAndGame.game_id = Game.game_id " +
+                        "WHERE Player.player_id = " + playerID);
+        return statement.executeQuery();
+    }
+
     public int retrieveNewGameID() throws SQLException, IllegalStateException{
         int maxID = 0;
         statement = con.prepareStatement("SELECT MAX(game_id) from Game");

@@ -42,6 +42,7 @@ public class MyGameFrame extends Application {
     public GridPane addPlayerInformation = new GridPane();
     public GridPane scoreInformation = new GridPane();
     public GridPane addScoreInformation = new GridPane();
+    public GridPane showScoreReport = new GridPane();
     public ScrollPane body;
     public Button gameBtn;
     public Button scoreBtn;
@@ -163,6 +164,10 @@ public class MyGameFrame extends Application {
         playerInformation.setHgap(NORMAL_GAP);
         playerInformation.setVgap(NORMAL_GAP);
 
+        ComboBox<Player> playerForReport = new ComboBox();
+        showScoreReport.add(new Label("Show report for: "), 0, 0);
+        showScoreReport.add(playerForReport, 1, 0);
+
         //score information items
         Label addScoreHeader = new Label("Add new score");
         addScoreHeader.setFont(Font.font("Arial", 24));
@@ -183,7 +188,7 @@ public class MyGameFrame extends Application {
         addScoreInformation.add(addNewScore, 1,5);
         addScoreInformation.add(gameForScore, 1, 2);
         addScoreInformation.add(playerForScore, 1, 1);
-        refreshComboBoxes(playerForScore, gameForScore);
+        refreshComboBoxes(playerForScore, gameForScore, playerForReport);
         addScoreInformation.setHgap(NORMAL_GAP);
         addScoreInformation.setVgap(NORMAL_GAP);
         
@@ -191,7 +196,8 @@ public class MyGameFrame extends Application {
         Label scoreHeader = new Label("Score Information");
         scoreHeader.setFont(Font.font("Arial", 24));
         scoreInformation.add(scoreHeader, 0, 0);
-        retrieveScoreList();
+        scoreInformation.add(showScoreReport, 0, 1);
+        retrieveScoreList(-1);
         scoreInformation.setStyle("-fx-background-color: lightgray");
         scoreInformation.setPadding(STANDARD_INSETS);
         scoreInformation.setPrefHeight(MIN_HEIGHT);
@@ -207,6 +213,12 @@ public class MyGameFrame extends Application {
 
         /* SETTING UP HANDLERS FOR ALL TOP LAYER BUTTONS */
 
+        //changes value of report
+
+        playerForReport.valueProperty().addListener(e->{
+            retrieveScoreList(playerForReport.getValue().getPlayerID());
+        });
+
         //game submenu
         gameBtn.setOnAction(e->{
             changeFrame(gameInformation);
@@ -220,8 +232,8 @@ public class MyGameFrame extends Application {
         //score submenu
         scoreBtn.setOnAction(e->{
             changeFrame(scoreInformation);
-            retrieveScoreList();
-            refreshComboBoxes(playerForScore,gameForScore);
+            retrieveScoreList(-1);
+            refreshComboBoxes(playerForScore,gameForScore,playerForReport);
         });
 
         //add new game
@@ -300,7 +312,7 @@ public class MyGameFrame extends Application {
                 textForScore.setText("");
                 datePicker.setValue(LocalDate.now());
                 changeFrame(scoreInformation);
-                retrieveScoreList();
+                retrieveScoreList(-1);
             }
             catch (NumberFormatException ex){
                 showAlertMessage(AlertType.ERROR, "Score has to be numerical");
@@ -339,10 +351,10 @@ public class MyGameFrame extends Application {
     }
 
     //retrieves score list on score submenu
-    public void retrieveScoreList(){
+    public void retrieveScoreList(int playerid){
         if (scoreDataPopulated){
+            scoreInformation.getChildren().remove(3);
             scoreInformation.getChildren().remove(2);
-            scoreInformation.getChildren().remove(1);
         }
         try {
             //inner grid pane stats
@@ -363,7 +375,13 @@ public class MyGameFrame extends Application {
             Label scoreLabel = new Label("Score");
             scoreLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
             scoreList.add(scoreLabel, 3, 0);
-            ResultSet resultSet = dbHandler.retrieveScores();
+            ResultSet resultSet;
+            if (playerid == -1) {
+                resultSet = dbHandler.retrieveScores();
+            }
+            else{
+                resultSet = dbHandler.retrieveScores(playerid);
+            }
             if (!resultSet.next()){
                 scoreList.add(new Label("Score list empty!"), 1, 1, 2, 1);
             }
@@ -379,8 +397,8 @@ public class MyGameFrame extends Application {
             }
 
             scoreList.setPadding(STANDARD_INSETS);
-            scoreInformation.add(scoreList, 0,1);
-            scoreInformation.add(addScoreInformation, 0, 2);
+            scoreInformation.add(scoreList, 0,2);
+            scoreInformation.add(addScoreInformation, 0, 3);
             scoreDataPopulated = true;
             resultSet.close();
         }
@@ -705,7 +723,7 @@ public class MyGameFrame extends Application {
     }
 
     //refreshes comboboxes on score submenu
-    public void refreshComboBoxes(ComboBox<Player> playerBox, ComboBox<Game> gameBox){
+    public void refreshComboBoxes(ComboBox<Player> playerBox, ComboBox<Game> gameBox, ComboBox<Player> playerBox2){
         if(comboBoxesPopulated) {
             addScoreInformation.getChildren().remove(9);
             addScoreInformation.getChildren().remove(8);
@@ -725,7 +743,9 @@ public class MyGameFrame extends Application {
                 String fullName = playerSet.getString("first_name") + " " + playerSet.getString("last_name");
                 Player player = new Player(fullName, playerSet.getInt("player_id"));
                 playerBox.getItems().add(player);
+                playerBox2.getItems().add(player);
             }
+            playerBox2.getItems().add(new Player("All", -1));
             playerSet.close();
         }
         catch (SQLException ex) {
