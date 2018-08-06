@@ -9,6 +9,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -19,6 +20,8 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+
 
 public class MyGameFrame extends Application {
     // set values for frames
@@ -40,10 +43,16 @@ public class MyGameFrame extends Application {
     public GridPane scoreInformation = new GridPane();
     public GridPane addScoreInformation = new GridPane();
     public ScrollPane body;
+    public Button gameBtn;
+    public Button scoreBtn;
+    public Button playerBtn;
     public MyGameDatabaseHandler dbHandler;
     private boolean gameDataPopulated = false;
     private boolean playerDataPopulated = false;
+    private boolean scoreDataPopulated = false;
+    private boolean comboBoxesPopulated = false;
 
+    //javafx launch
     public static void main(String[] args) {
         launch(args);
     }
@@ -64,6 +73,8 @@ public class MyGameFrame extends Application {
             handleSQLException();
         }
 
+        /* SETTING UP WINDOWS */
+
         //main window settings
         myGamePane.setMinSize(MIN_WIDTH, MIN_HEIGHT);
         myGamePane.setStyle("-fx-background-color: white");
@@ -71,9 +82,9 @@ public class MyGameFrame extends Application {
         myGamePane.setPadding(STANDARD_INSETS);
 
         //top menu bar
-        Button gameBtn = new Button("Games");
-        Button playerBtn = new Button("Players");
-        Button scoreBtn = new Button("Scores");
+        gameBtn = new Button("Games");
+        playerBtn = new Button("Players");
+        scoreBtn = new Button("Scores");
         GridPane topMenu = new GridPane();
         topMenu.setVgap(5);
         topMenu.setHgap(5);
@@ -155,43 +166,37 @@ public class MyGameFrame extends Application {
         //score information items
         Label addScoreHeader = new Label("Add new score");
         addScoreHeader.setFont(Font.font("Arial", 24));
-        ComboBox<String> playerForScore = new ComboBox();
-        ComboBox gameForScore = new ComboBox();
-        try{
-            ResultSet playerSet = dbHandler.retrievePlayers();
-            while (playerSet.next()){
-                String fullName = playerSet.getString("first_name") + " " + playerSet.getString("last_name");
-                playerForScore.getItems().add(fullName);
-            }
-            playerSet.close();
-            ResultSet gameSet = dbHandler.retrieveGames();
-            while (gameSet.next()){
-                gameForScore.getItems().add(gameSet.getString("game_title"));
-            }
-            gameSet.close(); 
-        }
-        catch (SQLException ex) {
-            handleSQLException();
-        }
+        addScoreHeader.setPadding(HEADER_DISTANCE);
+        ComboBox<Player> playerForScore = new ComboBox();
+        ComboBox<Game> gameForScore = new ComboBox();
         TextField textForScore = new TextField();
+        DatePicker datePicker = new DatePicker();
+        datePicker.setValue(LocalDate.now());
         Button addNewScore = new Button("Add score");
-        Label latestScoreHeader = new Label("Latest scores");
-        latestScoreHeader.setPadding(HEADER_DISTANCE);
-        latestScoreHeader.setFont(Font.font("Arial", 24));
-        scoreInformation.add(addScoreHeader, 0, 0, 2, 1);
-        scoreInformation.add(new Label("Player: "), 0, 1);
-        scoreInformation.add(playerForScore, 1, 1);
-        scoreInformation.add(new Label("Game: "), 0, 2);
-        scoreInformation.add(gameForScore, 1, 2);
-        scoreInformation.add(new Label("Score: "), 0, 3);
-        scoreInformation.add(textForScore, 1, 3);
-        scoreInformation.add(addNewScore, 1,4);
-        scoreInformation.add(latestScoreHeader, 0, 5, 2, 1);
+        addScoreInformation.add(addScoreHeader, 0, 0, 2, 1);
+        addScoreInformation.add(new Label("Player: "), 0, 1);
+        addScoreInformation.add(new Label("Game: "), 0, 2);
+        addScoreInformation.add(new Label("Score: "), 0, 3);
+        addScoreInformation.add(textForScore, 1, 3);
+        addScoreInformation.add(new Label("Date played: "), 0, 4);
+        addScoreInformation.add(datePicker, 1, 4);
+        addScoreInformation.add(addNewScore, 1,5);
+        addScoreInformation.add(gameForScore, 1, 2);
+        addScoreInformation.add(playerForScore, 1, 1);
+        refreshComboBoxes(playerForScore, gameForScore);
+        addScoreInformation.setHgap(NORMAL_GAP);
+        addScoreInformation.setVgap(NORMAL_GAP);
+        
+        //score list items
+        Label scoreHeader = new Label("Score Information");
+        scoreHeader.setFont(Font.font("Arial", 24));
+        scoreInformation.add(scoreHeader, 0, 0);
+        retrieveScoreList();
         scoreInformation.setStyle("-fx-background-color: lightgray");
         scoreInformation.setPadding(STANDARD_INSETS);
         scoreInformation.setPrefHeight(MIN_HEIGHT);
         scoreInformation.setHgap(NORMAL_GAP);
-        scoreInformation.setVgap(NORMAL_GAP);
+        scoreInformation.setVgap(NORMAL_GAP);       
 
         //add top menu to the main frame, myGamePane
         myGamePane.add(topMenu, 0, 0);
@@ -200,17 +205,26 @@ public class MyGameFrame extends Application {
         //change body frame to default item
         changeFrame(scoreInformation);
 
-        //handlers for all buttons
+        /* SETTING UP HANDLERS FOR ALL TOP LAYER BUTTONS */
+
+        //game submenu
         gameBtn.setOnAction(e->{
             changeFrame(gameInformation);
-            retrieveGamesMenu(addGameInformation);
         });
+
+        //player submenu
         playerBtn.setOnAction(e->{
             changeFrame(playerInformation);
         });
+
+        //score submenu
         scoreBtn.setOnAction(e->{
             changeFrame(scoreInformation);
+            retrieveScoreList();
+            refreshComboBoxes(playerForScore,gameForScore);
         });
+
+        //add new game
         addNewGame.setOnAction(e->{
             //if empty, show alert. else, call method to add game to database
             String gameToAdd = gameName.getText().trim();
@@ -224,13 +238,15 @@ public class MyGameFrame extends Application {
                     gameName.setText("");
                     changeFrame(gameInformation);
                     retrieveGamesMenu(addGameInformation);
-                    gameBtn.requestFocus();
                 }
                 catch (SQLException ex) {
                     handleSQLException();
                 }
             }
+            gameBtn.requestFocus();
         });
+
+        //add new player button
         addNewPlayer.setOnAction(e->{
             String fName = firstName.getText().trim();
             String lName = lastName.getText().trim();
@@ -260,12 +276,42 @@ public class MyGameFrame extends Application {
                     phoneNumber.setText("");
                     changeFrame(playerInformation);
                     retrievePlayersMenu(addPlayerInformation);
-                    playerBtn.requestFocus();
                 }
                 catch (SQLException ex) {
                     handleSQLException();
                 }
             }
+            playerBtn.requestFocus();
+        });
+
+        //add new score button
+        addNewScore.setOnAction(e->{
+            try {
+                int gameID = gameForScore.getValue().getGameID();
+                int playerID = playerForScore.getValue().getPlayerID();
+                int score = Integer.parseInt(textForScore.getText());
+                LocalDate localDate = datePicker.getValue();
+                if (localDate == null){
+                    showAlertMessage(AlertType.INFORMATION, "Date not set. Picking today's date instead.");
+                    localDate = LocalDate.now();
+                }
+                dbHandler.addNewScore(dbHandler.retrieveNewPlayerGameID(), gameID, playerID, localDate, score);
+                showAlertMessage(AlertType.CONFIRMATION, "Score added!");
+                textForScore.setText("");
+                datePicker.setValue(LocalDate.now());
+                changeFrame(scoreInformation);
+                retrieveScoreList();
+            }
+            catch (NumberFormatException ex){
+                showAlertMessage(AlertType.ERROR, "Score has to be numerical");
+            }
+            catch (NullPointerException ex){
+                showAlertMessage(AlertType.ERROR, "Please provide a game and a player");
+            }
+            catch (SQLException ex) {
+                handleSQLException();
+            }
+            scoreBtn.requestFocus();
         });
 
         //setting stage
@@ -292,6 +338,58 @@ public class MyGameFrame extends Application {
         myGamePane.setMargin(body, STANDARD_INSETS);
     }
 
+    //retrieves score list on score submenu
+    public void retrieveScoreList(){
+        if (scoreDataPopulated){
+            scoreInformation.getChildren().remove(2);
+            scoreInformation.getChildren().remove(1);
+        }
+        try {
+            //inner grid pane stats
+            GridPane scoreList = new GridPane();
+            scoreList.setHgap(NORMAL_GAP);
+            scoreList.setVgap(NORMAL_GAP);
+
+            //populate grid pane with data if possible
+            Label playerLabel = new Label("Player");
+            playerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            scoreList.add(playerLabel, 0, 0);
+            Label gameLabel = new Label("Game");
+            gameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            scoreList.add(gameLabel, 1, 0);
+            Label dateLabel = new Label("Date played");
+            dateLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            scoreList.add(dateLabel, 2, 0);
+            Label scoreLabel = new Label("Score");
+            scoreLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+            scoreList.add(scoreLabel, 3, 0);
+            ResultSet resultSet = dbHandler.retrieveScores();
+            if (!resultSet.next()){
+                scoreList.add(new Label("Score list empty!"), 1, 1, 2, 1);
+            }
+            else{
+                int i = 0;
+                do{
+                    i++;
+                    scoreList.add(new Label(resultSet.getString("full_name")), 0, i);
+                    scoreList.add(new Label(resultSet.getString("game_title")), 1, i);
+                    scoreList.add(new Label(resultSet.getString("playing_date")), 2, i);
+                    scoreList.add(new Label(resultSet.getString("score")), 3, i);
+                } while (resultSet.next());
+            }
+
+            scoreList.setPadding(STANDARD_INSETS);
+            scoreInformation.add(scoreList, 0,1);
+            scoreInformation.add(addScoreInformation, 0, 2);
+            scoreDataPopulated = true;
+            resultSet.close();
+        }
+        catch(SQLException e){
+            handleSQLException();
+        }
+    }
+
+    //retrieves game submenu
     public void retrieveGamesMenu(GridPane subPane){
         if (gameDataPopulated){
             gameInformation.getChildren().remove(2);
@@ -381,6 +479,7 @@ public class MyGameFrame extends Application {
                     Button showButton = new Button("Profile");               
                     showButton.setOnAction(e->{
                         showPlayerScreen(playerID);
+                        playerBtn.requestFocus();
                     });
                     playerList.add(showButton, 2, i);
                 } while (resultSet.next());
@@ -410,6 +509,7 @@ public class MyGameFrame extends Application {
 
     }
 
+    //shows edit game screen on game submenu
     public void showEditGameScreen(String gameID){
         editGameInformation = new GridPane();
         Label editGameHeader = new Label("Editing game with id " + gameID);
@@ -445,6 +545,8 @@ public class MyGameFrame extends Application {
                 }
                 changeFrame(gameInformation);
                 retrieveGamesMenu(addGameInformation);
+                gameBtn.requestFocus();
+
 
             });
         }
@@ -454,7 +556,8 @@ public class MyGameFrame extends Application {
         changeFrame(gameInformation);
         retrieveGamesMenu(editGameInformation);
     }
-    
+
+    //shows player screen and corresponding edit button
     public void showPlayerScreen(String playerID){
         showPlayerInformation = new GridPane();
         Label showPlayerHeader = new Label("Player information");
@@ -503,6 +606,7 @@ public class MyGameFrame extends Application {
                 changeFrame(playerInformation);
                 createEditPlayerScreen(playerID);
                 retrievePlayersMenu(editPlayerInformation);
+                playerBtn.requestFocus();
 
             });
         }
@@ -513,6 +617,7 @@ public class MyGameFrame extends Application {
         retrievePlayersMenu(showPlayerInformation);
     }
 
+    //changes viewed details to edit mode and provides a button to edit player
     public void createEditPlayerScreen(String playerID){
         editPlayerInformation = new GridPane();
         try{
@@ -591,10 +696,39 @@ public class MyGameFrame extends Application {
                         handleSQLException();
                     }
                 }
-
+                playerBtn.requestFocus();
             });
         }
         catch(SQLException e){
+            handleSQLException();
+        }
+    }
+
+    //refreshes comboboxes on score submenu
+    public void refreshComboBoxes(ComboBox<Player> playerBox, ComboBox<Game> gameBox){
+        if(comboBoxesPopulated) {
+            addScoreInformation.getChildren().remove(9);
+            addScoreInformation.getChildren().remove(8);
+        }
+
+        try{
+            playerBox.getItems().clear();
+            gameBox.getItems().clear();
+            ResultSet gameSet = dbHandler.retrieveGames();
+            while (gameSet.next()){
+                Game game = new Game(gameSet.getString("game_title"), gameSet.getInt("game_id"));
+                gameBox.getItems().add(game);
+            }
+            gameSet.close();
+            ResultSet playerSet = dbHandler.retrievePlayers();
+            while (playerSet.next()){
+                String fullName = playerSet.getString("first_name") + " " + playerSet.getString("last_name");
+                Player player = new Player(fullName, playerSet.getInt("player_id"));
+                playerBox.getItems().add(player);
+            }
+            playerSet.close();
+        }
+        catch (SQLException ex) {
             handleSQLException();
         }
     }

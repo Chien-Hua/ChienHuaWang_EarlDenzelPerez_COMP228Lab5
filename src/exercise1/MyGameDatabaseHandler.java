@@ -1,10 +1,7 @@
 package exercise1;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.LocalDate;
 
 public class MyGameDatabaseHandler {
 
@@ -31,6 +28,14 @@ public class MyGameDatabaseHandler {
         return statement.executeQuery();
     }
 
+    public ResultSet retrieveScores() throws SQLException, IllegalStateException{
+        statement = con.prepareStatement(
+                "SELECT (first_name  + ' ' + last_name) as full_name, game_title, playing_date, score from PlayerAndGame " +
+                        "JOIN Player on PlayerAndGame.player_id = Player.player_id " +
+                        "JOIN Game on PlayerAndGame.game_id = Game.game_id");
+        return statement.executeQuery();
+    }
+
     public int retrieveNewGameID() throws SQLException, IllegalStateException{
         int maxID = 0;
         statement = con.prepareStatement("SELECT MAX(game_id) from Game");
@@ -45,6 +50,17 @@ public class MyGameDatabaseHandler {
     public int retrieveNewPlayerID() throws SQLException, IllegalStateException{
         int maxID = 0;
         statement = con.prepareStatement("SELECT MAX(player_id) from Player");
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()) {
+            maxID = rs.getInt(1) + 1;
+        }
+        rs.close();
+        return maxID;
+    }
+
+    public int retrieveNewPlayerGameID() throws SQLException, IllegalStateException{
+        int maxID = 0;
+        statement = con.prepareStatement("SELECT MAX(player_game_id) from PlayerAndGame");
         ResultSet rs = statement.executeQuery();
         if (rs.next()) {
             maxID = rs.getInt(1) + 1;
@@ -89,7 +105,17 @@ public class MyGameDatabaseHandler {
         statement.setString(6, zipCode);
         statement.setString(7, phoneNumber);
         statement.executeUpdate();
+    }
 
+    public void addNewScore(int pgID, int gameID, int playerID, LocalDate playDate, int score) throws SQLException, IllegalStateException{
+        statement = con.prepareStatement(
+                "INSERT into PlayerAndGame (player_game_id, game_id, player_id, playing_date, score) VALUES(?,?,?,?,?)");
+        statement.setInt(1, pgID);
+        statement.setInt(2, gameID);
+        statement.setInt(3, playerID);
+        statement.setDate(4, Date.valueOf(playDate));
+        statement.setInt(5, score);
+        statement.executeUpdate();
     }
 
     public void updateGame(String gameID, String newGameName) throws SQLException, IllegalStateException{
